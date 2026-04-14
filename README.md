@@ -57,3 +57,33 @@ A mobile-first civic platform for rural communities to improve transparency, com
 - Use `npm run build --prefix client` to produce production frontend assets.
 - Run backend with `npm run start --prefix server`.
 - Keep HTTPS enabled at your hosting layer and allow only your real frontend domain in `CORS_ORIGIN`.
+
+## Deploying with Render Backend + Vercel Frontend
+
+### Render Backend Setup
+Set these environment variables in your Render service settings:
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `NODE_ENV` | `production` | Required for production security checks |
+| `MONGO_URI` | `mongodb+srv://user:password@cluster.mongodb.net/dbname` | Use MongoDB Atlas, not localhost |
+| `JWT_SECRET` | Random string 24+ chars | Generate with `openssl rand -base64 32` |
+| `CORS_ORIGIN` | `https://village-governance-platform-two.vercel.app` | Your Vercel frontend URL |
+| `ADMIN_EMAIL` | `admin@village.local` | Admin login email |
+| `ADMIN_PASSWORD` | Strong password | Set a production admin password |
+| `EMAIL_USER` | Your Gmail or provider email | For OTP delivery |
+| `EMAIL_PASSWORD` | App-specific password | Gmail: use app password, not account password |
+| `TRUST_PROXY` | `true` | Required for Render reverse proxy |
+| `PORT` | `5000` | Default, can be left unset |
+
+### Vercel Frontend Setup
+Set these environment variables in your Vercel project settings:
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `VITE_API_URL` | `https://village-governance-platform-1.onrender.com/api` | Your Render backend API URL |
+
+### Verification
+1. Render should show "Server started at http://localhost:5000" in logs.
+2. Visit your Vercel frontend: `https://village-governance-platform-two.vercel.app/`
+3. Test API connectivity by creating an account or viewing complaints.
