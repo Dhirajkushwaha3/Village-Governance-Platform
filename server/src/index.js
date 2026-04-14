@@ -24,6 +24,15 @@ const legacyUploadsPath = path.join(process.cwd(), "uploads");
 const defaultLocalOrigins = ["http://localhost:5173", "http://localhost:5174"];
 const vercelOriginPattern = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i;
 
+function isLocalMongoUri(mongoUri) {
+  try {
+    const parsed = new URL(mongoUri.replace(/^mongodb(\+srv)?:\/\//, "http://"));
+    return ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+  } catch {
+    return /localhost|127\.0\.0\.1|\[::1\]/i.test(mongoUri);
+  }
+}
+
 app.disable("x-powered-by");
 
 function getAllowedOrigins() {
@@ -65,6 +74,10 @@ function getTrustProxyValue() {
 function validateRuntimeConfig() {
   if (!process.env.MONGO_URI) {
     throw new Error("MONGO_URI must be set");
+  }
+
+  if (isProduction && isLocalMongoUri(process.env.MONGO_URI)) {
+    throw new Error("MONGO_URI points to a local MongoDB instance. Use a hosted MongoDB URI in production.");
   }
 
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24) {

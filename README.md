@@ -50,7 +50,9 @@ A mobile-first civic platform for rural communities to improve transparency, com
 
 - Set `NODE_ENV=production` in server environment.
 - Set required server variables: `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_USER`, `EMAIL_PASSWORD`.
+- Make sure `MONGO_URI` points to a hosted MongoDB service such as MongoDB Atlas; `localhost` will not work on Render.
 - Set `CORS_ORIGIN` to your frontend origin, or use `FRONTEND_URL` if you prefer a single canonical URL.
+- If the frontend is hosted on Vercel, set `VITE_API_URL` in the client environment to your Render backend URL, for example `https://your-backend.onrender.com/api`.
 - If deploying behind a reverse proxy (Nginx, Azure, Render, etc.), set `TRUST_PROXY=true`.
 - Use `npm run build --prefix client` to produce production frontend assets.
 - Run backend with `npm run start --prefix server`.
