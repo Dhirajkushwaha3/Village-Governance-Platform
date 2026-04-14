@@ -21,15 +21,35 @@ const app = express();
 const isProduction = process.env.NODE_ENV === "production";
 const serverUploadsPath = path.join(__dirname, "..", "uploads");
 const legacyUploadsPath = path.join(process.cwd(), "uploads");
+const defaultLocalOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const vercelOriginPattern = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i;
 
 app.disable("x-powered-by");
 
 function getAllowedOrigins() {
-  const originCsv = process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174";
-  return originCsv
-    .split(",")
+  const originValues = [process.env.CORS_ORIGIN, process.env.FRONTEND_URL, process.env.CLIENT_URL];
+
+  if (process.env.VERCEL_URL) {
+    originValues.push(`https://${process.env.VERCEL_URL}`);
+  }
+
+  const origins = originValues
+    .flatMap((value) => (value ? value.split(",") : []))
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((item) => {
+      try {
+        return new URL(item).origin;
+      } catch {
+        return item.replace(/\/$/, "");
+      }
+    });
+
+  if (origins.length > 0) {
+    return [...new Set(origins)];
+  }
+
+  return isProduction ? [] : defaultLocalOrigins;
 }
 
 function getTrustProxyValue() {
@@ -52,16 +72,16 @@ function validateRuntimeConfig() {
   }
 
   if (isProduction) {
-    if (!process.env.CORS_ORIGIN) {
-      throw new Error("CORS_ORIGIN is required in production");
-    }
-
     if (!process.env.ADMIN_PASSWORD) {
       throw new Error("ADMIN_PASSWORD is required in production");
     }
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       throw new Error("EMAIL_USER and EMAIL_PASSWORD are required in production for OTP delivery");
+    }
+
+    if (!process.env.CORS_ORIGIN && !process.env.FRONTEND_URL && !process.env.CLIENT_URL && !process.env.VERCEL_URL) {
+      console.warn("No frontend origin is configured. Set CORS_ORIGIN or FRONTEND_URL to restrict browser access.");
     }
   }
 }
@@ -80,6 +100,7 @@ validateRuntimeConfig();
 
 function isOriginAllowed(origin) {
   if (!origin) return true;
+  if (vercelOriginPattern.test(origin)) return true;
   return allowedOrigins.includes(origin);
 }
 

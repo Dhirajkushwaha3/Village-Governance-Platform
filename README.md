@@ -49,7 +49,8 @@ A mobile-first civic platform for rural communities to improve transparency, com
 ## Important Production Notes
 
 - Set `NODE_ENV=production` in server environment.
-- Set required server variables: `MONGO_URI`, `JWT_SECRET`, `CORS_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_USER`, `EMAIL_PASSWORD`.
+- Set required server variables: `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_USER`, `EMAIL_PASSWORD`.
+- Set `CORS_ORIGIN` to your frontend origin, or use `FRONTEND_URL` if you prefer a single canonical URL.
 - If deploying behind a reverse proxy (Nginx, Azure, Render, etc.), set `TRUST_PROXY=true`.
 - Use `npm run build --prefix client` to produce production frontend assets.
 - Run backend with `npm run start --prefix server`.
