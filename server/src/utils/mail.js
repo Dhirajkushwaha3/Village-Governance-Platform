@@ -23,17 +23,28 @@ function shouldForceIpv4() {
   return raw === "true" || raw === "1" || raw === "yes";
 }
 
-function createTransportConfig(emailService, emailUser, emailPass) {
+async function resolveIpv4Host(hostname) {
+  try {
+    const addresses = await dns.promises.resolve4(hostname);
+    if (addresses.length > 0) {
+      return addresses[0];
+    }
+  } catch {
+    // Fall back to hostname if DNS IPv4 resolution is unavailable.
+  }
+
+  return hostname;
+}
+
+async function createTransportConfig(emailService, emailUser, emailPass) {
   const forceIpv4 = shouldForceIpv4();
   const connectionTimeout = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 15000);
   const smtpHost = process.env.EMAIL_HOST || "smtp.gmail.com";
-  const lookup = forceIpv4
-    ? (hostname, options, callback) => dns.lookup(hostname, { ...options, family: 4 }, callback)
-    : undefined;
+  const resolvedHost = forceIpv4 ? await resolveIpv4Host(smtpHost) : smtpHost;
 
   if (emailService.toLowerCase() === "gmail") {
     return {
-      host: smtpHost,
+      host: resolvedHost,
       port: Number(process.env.EMAIL_PORT || 587),
       secure: false,
       requireTLS: true,
@@ -41,7 +52,6 @@ function createTransportConfig(emailService, emailUser, emailPass) {
         user: emailUser,
         pass: emailPass
       },
-      lookup,
       tls: {
         servername: smtpHost,
         family: forceIpv4 ? 4 : undefined
@@ -56,7 +66,6 @@ function createTransportConfig(emailService, emailUser, emailPass) {
       user: emailUser,
       pass: emailPass
     },
-    lookup,
     connectionTimeout
   };
 }
@@ -77,7 +86,7 @@ export async function sendOtpEmail(email, otp) {
   }
 
   try {
-    const transportConfig = createTransportConfig(emailService, emailUser, emailPass);
+    const transportConfig = await createTransportConfig(emailService, emailUser, emailPass);
     const transporter = nodemailer.createTransport(transportConfig);
 
     await transporter.sendMail({
