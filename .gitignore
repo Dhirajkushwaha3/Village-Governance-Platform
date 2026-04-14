@@ -8,3 +8,4 @@ dist
 coverage
 server/uploads/*
 !server/uploads/.gitkeep
+.env.example
