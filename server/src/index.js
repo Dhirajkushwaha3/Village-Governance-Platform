@@ -63,7 +63,7 @@ function getAllowedOrigins() {
 
 function getTrustProxyValue() {
   const value = String(process.env.TRUST_PROXY || "").trim().toLowerCase();
-  if (!value) return false;
+  if (!value) return isProduction ? 1 : false;
   if (value === "true") return true;
   if (value === "false") return false;
   const numeric = Number(value);

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import dns from "node:dns";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -25,10 +26,14 @@ function shouldForceIpv4() {
 function createTransportConfig(emailService, emailUser, emailPass) {
   const forceIpv4 = shouldForceIpv4();
   const connectionTimeout = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 15000);
+  const smtpHost = process.env.EMAIL_HOST || "smtp.gmail.com";
+  const lookup = forceIpv4
+    ? (hostname, options, callback) => dns.lookup(hostname, { ...options, family: 4 }, callback)
+    : undefined;
 
   if (emailService.toLowerCase() === "gmail") {
     return {
-      host: process.env.EMAIL_HOST || "smtp.gmail.com",
+      host: smtpHost,
       port: Number(process.env.EMAIL_PORT || 587),
       secure: false,
       requireTLS: true,
@@ -36,7 +41,11 @@ function createTransportConfig(emailService, emailUser, emailPass) {
         user: emailUser,
         pass: emailPass
       },
-      family: forceIpv4 ? 4 : undefined,
+      lookup,
+      tls: {
+        servername: smtpHost,
+        family: forceIpv4 ? 4 : undefined
+      },
       connectionTimeout
     };
   }
@@ -47,7 +56,7 @@ function createTransportConfig(emailService, emailUser, emailPass) {
       user: emailUser,
       pass: emailPass
     },
-    family: forceIpv4 ? 4 : undefined,
+    lookup,
     connectionTimeout
   };
 }
