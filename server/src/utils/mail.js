@@ -38,16 +38,29 @@ async function resolveIpv4Host(hostname) {
 
 async function createTransportConfig(emailService, emailUser, emailPass) {
   const forceIpv4 = shouldForceIpv4();
-  const connectionTimeout = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 15000);
+  const connectionTimeout = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 30000);
+  const socketTimeout = Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 45000);
   const smtpHost = process.env.EMAIL_HOST || "smtp.gmail.com";
   const resolvedHost = forceIpv4 ? await resolveIpv4Host(smtpHost) : smtpHost;
 
   if (emailService.toLowerCase() === "gmail") {
-    return {
+    const primaryPort = Number(process.env.EMAIL_PORT || 587);
+    const primarySecure = String(process.env.EMAIL_SECURE || "").trim().toLowerCase() === "true";
+    const profiles = [
+      { port: primaryPort, secure: primarySecure },
+      { port: 587, secure: false },
+      { port: 465, secure: true }
+    ];
+
+    const uniqueProfiles = profiles.filter((profile, index, list) => {
+      return index === list.findIndex((item) => item.port === profile.port && item.secure === profile.secure);
+    });
+
+    return uniqueProfiles.map((profile) => ({
       host: resolvedHost,
-      port: Number(process.env.EMAIL_PORT || 587),
-      secure: false,
-      requireTLS: true,
+      port: profile.port,
+      secure: profile.secure,
+      requireTLS: !profile.secure,
       auth: {
         user: emailUser,
         pass: emailPass
@@ -56,18 +69,22 @@ async function createTransportConfig(emailService, emailUser, emailPass) {
         servername: smtpHost,
         family: forceIpv4 ? 4 : undefined
       },
-      connectionTimeout
-    };
+      connectionTimeout,
+      greetingTimeout: connectionTimeout,
+      socketTimeout
+    }));
   }
 
-  return {
+  return [{
     service: emailService,
     auth: {
       user: emailUser,
       pass: emailPass
     },
-    connectionTimeout
-  };
+    connectionTimeout,
+    greetingTimeout: connectionTimeout,
+    socketTimeout
+  }];
 }
 
 export async function sendOtpEmail(email, otp) {
@@ -86,18 +103,30 @@ export async function sendOtpEmail(email, otp) {
   }
 
   try {
-    const transportConfig = await createTransportConfig(emailService, emailUser, emailPass);
-    const transporter = nodemailer.createTransport(transportConfig);
+    const transportConfigs = await createTransportConfig(emailService, emailUser, emailPass);
+    let lastError;
 
-    await transporter.sendMail({
-      from: emailUser,
-      to: email,
-      subject: "Your OTP - Village Governance",
-      text: `Your OTP is: ${otp}\n\nValid for 10 minutes.`
-    });
+    for (const config of transportConfigs) {
+      try {
+        const transporter = nodemailer.createTransport(config);
+
+        await transporter.sendMail({
+          from: emailUser,
+          to: email,
+          subject: "Your OTP - Village Governance",
+          text: `Your OTP is: ${otp}\n\nValid for 10 minutes.`
+        });
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error("All email transport attempts failed");
   } catch (error) {
     logOtpInConsole(email, otp);
     console.error("Email error:", error.message);
-    throw new Error("OTP email failed. Check EMAIL settings (EMAIL_USER, EMAIL_PASSWORD, EMAIL_FORCE_IPV4).");
+    throw new Error("OTP email failed. Check EMAIL settings (EMAIL_USER, EMAIL_PASSWORD, EMAIL_FORCE_IPV4, EMAIL_PORT, EMAIL_SECURE).");
   }
 }
