@@ -16,6 +16,42 @@ function hasEmailConfig() {
   return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
 }
 
+function shouldForceIpv4() {
+  const raw = String(process.env.EMAIL_FORCE_IPV4 || "").trim().toLowerCase();
+  if (!raw) return isProduction;
+  return raw === "true" || raw === "1" || raw === "yes";
+}
+
+function createTransportConfig(emailService, emailUser, emailPass) {
+  const forceIpv4 = shouldForceIpv4();
+  const connectionTimeout = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 15000);
+
+  if (emailService.toLowerCase() === "gmail") {
+    return {
+      host: process.env.EMAIL_HOST || "smtp.gmail.com",
+      port: Number(process.env.EMAIL_PORT || 587),
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      },
+      family: forceIpv4 ? 4 : undefined,
+      connectionTimeout
+    };
+  }
+
+  return {
+    service: emailService,
+    auth: {
+      user: emailUser,
+      pass: emailPass
+    },
+    family: forceIpv4 ? 4 : undefined,
+    connectionTimeout
+  };
+}
+
 export async function sendOtpEmail(email, otp) {
   const emailUser = process.env.EMAIL_USER;
   const emailPass = process.env.EMAIL_PASSWORD;
@@ -32,13 +68,8 @@ export async function sendOtpEmail(email, otp) {
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: emailService,
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      }
-    });
+    const transportConfig = createTransportConfig(emailService, emailUser, emailPass);
+    const transporter = nodemailer.createTransport(transportConfig);
 
     await transporter.sendMail({
       from: emailUser,
@@ -49,6 +80,6 @@ export async function sendOtpEmail(email, otp) {
   } catch (error) {
     logOtpInConsole(email, otp);
     console.error("Email error:", error.message);
-    throw new Error("OTP email failed. Check EMAIL_USER and EMAIL_PASSWORD in server/.env.");
+    throw new Error("OTP email failed. Check EMAIL settings (EMAIL_USER, EMAIL_PASSWORD, EMAIL_FORCE_IPV4).");
   }
 }
