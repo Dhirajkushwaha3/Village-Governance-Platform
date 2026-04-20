@@ -143,9 +143,11 @@ function setupMiddleware() {
 
 function setupStaticFiles() {
   app.use("/uploads", express.static(serverUploadsPath));
+  app.use("/api/uploads", express.static(serverUploadsPath));
 
   if (legacyUploadsPath !== serverUploadsPath) {
     app.use("/uploads", express.static(legacyUploadsPath));
+    app.use("/api/uploads", express.static(legacyUploadsPath));
   }
 }
 
