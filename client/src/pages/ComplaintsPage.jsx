@@ -16,7 +16,7 @@ function buildImageUrl(baseUrl, imagePath) {
     return rawPath;
   }
 
-  // Support legacy Windows-style paths and normalize accidental "/api/uploads" prefixes.
+  // Keep path handling simple and stable across local/prod uploads.
   let normalizedPath = rawPath.replace(/\\/g, "/").replace(/^\.\//, "/");
   normalizedPath = normalizedPath.replace(/^\/api\/uploads\//i, "/uploads/");
 
@@ -132,9 +132,9 @@ export default function ComplaintsPage() {
             {item.imageUrl && (
               <img
                 className="thumb"
-                  src={buildImageUrl(imageBaseUrl, item.imageUrl)}
+                src={buildImageUrl(imageBaseUrl, item.imageUrl)}
                 alt={item.title}
-                  onClick={() => setPreviewImage(buildImageUrl(imageBaseUrl, item.imageUrl))}
+                onClick={() => setPreviewImage(buildImageUrl(imageBaseUrl, item.imageUrl))}
               />
             )}
 
