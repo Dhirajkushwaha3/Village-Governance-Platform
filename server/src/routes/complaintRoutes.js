@@ -1,6 +1,3 @@
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
 import express from "express";
 import multer from "multer";
 import { Complaint } from "../models/Complaint.js";
@@ -9,22 +6,9 @@ import { authRequired, requireRole } from "../middleware/auth.js";
 import { shouldAllowEscalation } from "../utils/otp.js";
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, "..", "..", "uploads");
-
-fs.mkdirSync(uploadsDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "");
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }
 });
 
@@ -74,11 +58,15 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
     return res.status(409).json({ message: "Similar complaint already submitted recently" });
   }
 
+  const imageUrl = req.file
+    ? `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`
+    : "";
+
   const complaint = await Complaint.create({
     title: title.trim(),
     description: description.trim(),
     category,
-    imageUrl: req.file ? `/uploads/${req.file.filename}` : "",
+    imageUrl,
     location: location.trim(),
     createdBy: req.user._id
   });

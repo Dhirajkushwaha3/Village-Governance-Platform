@@ -12,7 +12,7 @@ function buildImageUrl(baseUrl, imagePath) {
   const rawPath = String(imagePath).trim();
   if (!rawPath) return "";
 
-  if (/^https?:\/\//i.test(rawPath)) {
+  if (/^https?:\/\//i.test(rawPath) || /^data:/i.test(rawPath)) {
     return rawPath;
   }
 
