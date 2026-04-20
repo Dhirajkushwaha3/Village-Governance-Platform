@@ -8,7 +8,23 @@ function getUser() {
 
 function buildImageUrl(baseUrl, imagePath) {
   if (!imagePath) return "";
-  return `${baseUrl}${imagePath}`;
+
+  const rawPath = String(imagePath).trim();
+  if (!rawPath) return "";
+
+  if (/^https?:\/\//i.test(rawPath)) {
+    return rawPath;
+  }
+
+  // Support legacy Windows-style paths and normalize accidental "/api/uploads" prefixes.
+  let normalizedPath = rawPath.replace(/\\/g, "/").replace(/^\.\//, "/");
+  normalizedPath = normalizedPath.replace(/^\/api\/uploads\//i, "/uploads/");
+
+  if (!normalizedPath.startsWith("/")) {
+    normalizedPath = `/${normalizedPath}`;
+  }
+
+  return `${baseUrl}${normalizedPath}`;
 }
 
 function canEscalate(complaint) {
@@ -36,7 +52,7 @@ export default function ComplaintsPage() {
   const user = getUser();
   const imageBaseUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-    return apiUrl.replace(/\/api$/, "");
+    return apiUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
   }, []);
 
   async function load() {
