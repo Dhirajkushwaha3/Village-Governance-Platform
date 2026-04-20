@@ -57,7 +57,7 @@ const candidates = [
     verificationStatus: "approved"
   },
   {
-    name: "Test Candidate 1",
+    name: "Candidate",
     designation: "member",
     age: 36,
     mobileNumbers: ["+91-0000000000"],
@@ -71,7 +71,7 @@ const candidates = [
     verificationStatus: "approved"
   },
   {
-    name: "Test Candidate 2",
+    name: "Candidate",
     designation: "member",
     age: 33,
     mobileNumbers: ["+91-9100000000", "+91-9100000000"],
